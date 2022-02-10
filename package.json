@@ -1,0 +1,19 @@
+{
+  "name": "wa-baileys",
+  "version": "1.0.0",
+  "description": "Baileys - Typescript/Javascript WhatsApp Web API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "wa",
+    "baileys"
+  ],
+  "author": "Muhamad Ade Rohayat",
+  "license": "MIT",
+  "dependencies": {
+    "@adiwajshing/baileys": "^4.0.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
