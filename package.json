@@ -4,7 +4,8 @@
   "description": "Baileys - Typescript/Javascript WhatsApp Web API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node index.ts",
+    "dev": "nodemon index.ts"
   },
   "keywords": [
     "wa",
@@ -14,6 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "@adiwajshing/baileys": "^4.0.0",
+    "express": "^4.17.2",
+    "http": "^0.0.1-security",
     "qrcode-terminal": "^0.12.0"
   }
 }
