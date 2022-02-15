@@ -22,7 +22,11 @@ const startSock = async (id) => {
 			if((lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut) {
 				startSock(id)
 			} else {
-				console.log('connection closed')
+				unlink(`./sessions/session-${id}.json`, (err) => {
+					if (err) throw err;
+					console.log(`successfully deleted session ${id}`);
+					startSock(id)
+				});
 			}
 		}
 	})
