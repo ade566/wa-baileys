@@ -3,11 +3,15 @@ import { unlink } from 'fs';
 import P from 'pino'
 import * as express from 'express';
 import * as http from 'http'
+import * as qrcode from 'qrcode'
+import {Server} from 'socket.io'
 import makeWASocket, { DisconnectReason, useSingleFileAuthState } from '@adiwajshing/baileys'
 
 const port = 3000;
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server);
+
 var sock = {};
 
 app.use(express.json());
@@ -16,39 +20,63 @@ app.use(express.urlencoded({
 }));
 
 const startSock = async (id) => {
-	console.log(`ObjectID: ${id}`);
-	
-	const { state, saveState } = useSingleFileAuthState(`./sessions/session-${id}.json`)
-	sock[id] = makeWASocket({
-		logger: P({ level: 'trace' }),
-		printQRInTerminal: true,
-		auth: state
-	})
+	try {
+		console.log(`ObjectID: ${id}`);
+		
+		const { state, saveState } = useSingleFileAuthState(`./sessions/session-${id}.json`)
+		sock[id] = makeWASocket({
+			// logger: P({ level: 'trace' }),
+			printQRInTerminal: true,
+			auth: state
+		})
 
-	sock[id].ev.on('connection.update', (update) => {
-		const { connection, lastDisconnect } = update
-		if(connection === 'close') {
-			// reconnect if not logged out
-			if((lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut) {
-				startSock(id)
-			} else {
-				unlink(`./sessions/session-${id}.json`, (err) => {
-					if (err) throw err;
-					console.log(`successfully deleted session ${id}`);
-					startSock(id)
-				});
+		sock[id].ev.on('connection.update', async (update) => {
+			const { connection, lastDisconnect, qr } = update
+			try {
+				if(qr){
+					qrcode.toDataURL(qr, (err, url) => {
+						io.emit('qr', { id: id, src: url });
+					});
+				}
+				if(connection === 'close') {
+					console.log(`connection: ${connection}`);
+					if((lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut) {
+						console.log('run close not logout');
+						setTimeout(() => {
+							startSock(id)
+						}, 10000)
+					} else {
+						unlink(`./sessions/session-${id}.json`, (err) => {
+							if (err) throw err;
+							console.log(`successfully deleted session ${id}`);
+							startSock(id)
+						});
+					}
+				}
+			} catch (error) {
+					
 			}
-		}
-	})
+		})
 
-	sock[id].ev.on('creds.update', saveState)
+		sock[id].ev.on('creds.update', saveState)
 
-	return sock[id];
+		return false;
+	} catch (error) {
+		console.log('error: startSock');
+		console.log(error);
+	}
 }
 
-var idClient = ["wacs3"]
-idClient.forEach(e => {
-	startSock(e)
+const init = async (socket?) => {
+	var idClient = ["wacs3"]
+	console.log('run init');
+	idClient.forEach(e => {
+		startSock(e)
+	});
+}
+init()
+io.on('connection', function (socket) {
+  init(socket);
 });
 
 app.get('/', (req, res) => {
