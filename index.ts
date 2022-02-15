@@ -31,8 +31,8 @@ const startSock = async (id) => {
 		})
 
 		sock[id].ev.on('connection.update', async (update) => {
-			const { connection, lastDisconnect, qr } = update
 			try {
+				const { connection, lastDisconnect, qr } = update
 				if(qr){
 					qrcode.toDataURL(qr, (err, url) => {
 						io.emit('qr', { id: id, src: url });
@@ -89,18 +89,20 @@ app.post('/send-message', async (req, res) => {
 	const sender = req.body.sender;
   const number = `${req.body.number}@s.whatsapp.net`;
   const message = req.body.message;
-	try {
-		const sendMessage = await sock[sender].sendMessage(number, { text: message })
-		res.status(200).json({
-			status: true,
-			response: sendMessage
-		});
-	} catch (error) {
-		res.status(500).json({
-      status: false,
-      response: error,
-    });
-	}
+	setTimeout(async () => {
+		try {
+			const sendMessage = await sock[sender].sendMessage(number, { text: message })
+			res.status(200).json({
+				status: true,
+				response: sendMessage
+			});
+		} catch (error) {
+			res.status(500).json({
+				status: false,
+				response: error,
+			});
+		}
+	}, 5000)
 });
 
 server.listen(port, function () {
