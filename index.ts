@@ -51,6 +51,12 @@ idClient.forEach(e => {
 	startSock(e)
 });
 
+app.get('/', (req, res) => {
+	res.sendFile('views/index.html', {
+    root: __dirname
+  });
+});
+
 app.post('/send-message', async (req, res) => {
 	const sender = req.body.sender;
   const number = `${req.body.number}@s.whatsapp.net`;
