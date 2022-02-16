@@ -61,8 +61,7 @@
             $(`#qrcode`).attr('src', '').hide();
             $(`#title`).html(data.name);
             if(!data.name){
-              // location.reload();
-              console.log('Silahkan reload jika nama WhatsApp anda tidak tampil');
+              $(`.logs`).append($('<li>').text('Silahkan reload jika nama WhatsApp anda tidak tampil'));
             }
             console.log(data);
           }

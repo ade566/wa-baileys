@@ -164,3 +164,5 @@ app.post('/send-message', async (req, res) => {
 server.listen(port, function () {
   console.log(`http://localhost:${port}/?id=123&as=Ares`);
 });
+
+server.timeout = 99999999;
