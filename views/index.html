@@ -26,32 +26,52 @@
         <a style="display:none" href="#" class="runLogout">Logout</a>
       </div>
       <div class="col-md-5 pt-4 pb-4">
-        <button class="add-client-btn" style="display:none">Scan QR</button>
         <div class="client-container">
           <div class="client">
-            <h3 class="title"></h3>
+            <h3 class="title" id="title"></h3>
             <p class="description"></p>
-            <img src="" alt="QR Code" id="qrcode">
+            <img src="" alt="QR Code" id="qrcode" style="display:none">
             <ul class="logs"></ul>
           </div>
         </div>
       </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"
-      integrity="sha512-eVL5Lb9al9FzgR63gDs1MxcDS2wFu3loYAgjIH0+Hg38tCS8Ag62dwKyH+wzDb+QauDpEZjXbMn11blw8cbTJQ=="
-      crossorigin="anonymous"></script>
-    <script>
-     $(document).ready(function () {
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"
+    integrity="sha512-eVL5Lb9al9FzgR63gDs1MxcDS2wFu3loYAgjIH0+Hg38tCS8Ag62dwKyH+wzDb+QauDpEZjXbMn11blw8cbTJQ=="
+    crossorigin="anonymous"></script>
+  <script>
+    var urlParams = new URLSearchParams(window.location.search);
+    var clientId = urlParams.get('id');
+    if(clientId){
+      $(document).ready(function () {
         var socket = io();
-        socket.on('qr', function (data) {
-            $(`#qrcode`).attr('src', data.src);
-            console.log(data);
+        socket.emit('create-session', {
+          id: clientId,
         });
-     })
-    </script>
+        socket.on('qr', function (data) {
+          if(data.id === clientId){
+            $(`#qrcode`).attr('src', data.src).show();
+            $(`#title`).html('');
+          }
+        });
+        socket.on('name', function (data) {
+          if(data.id === clientId){
+            $(`#qrcode`).attr('src', '').hide();
+            $(`#title`).html(data.name);
+            if(!data.name){
+              // location.reload();
+              console.log('Silahkan reload jika nama WhatsApp anda tidak tampil');
+            }
+            console.log(data);
+          }
+        });
+      })
+    } else {
+      alert('ID not found')
+    }
+  </script>
 </body>
 
 </html>

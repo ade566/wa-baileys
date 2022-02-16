@@ -1,6 +1,5 @@
 import { Boom } from '@hapi/boom'
-import { unlink } from 'fs';
-import P from 'pino'
+import { unlink, existsSync,  writeFileSync, readFileSync, writeFile} from 'fs';
 import * as express from 'express';
 import * as http from 'http'
 import * as qrcode from 'qrcode'
@@ -19,13 +18,46 @@ app.use(express.urlencoded({
   extended: true
 }));
 
+const sessions = [];
+const SESSIONS_FILE = './sessions/whatsapp-id.json';
+
+const createSessionsFileIfNotExists = function () {
+  if (!existsSync(SESSIONS_FILE)) {
+		try {
+    	writeFileSync(SESSIONS_FILE, JSON.stringify([]));
+      console.log('Sessions file created successfully');
+    } catch (err) {
+      console.log('Failed to create sessions file: ', err);
+    }
+  }
+}
+createSessionsFileIfNotExists();
+
+const getSessionsFile = function () {
+  try {
+    return JSON.parse(readFileSync(SESSIONS_FILE).toString());
+  } catch (error) {
+    return []
+  }
+}
+
+const setSessionsFile = function (sessions) {
+  writeFile(SESSIONS_FILE, JSON.stringify(sessions), function (err) {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+
 const startSock = async (id) => {
 	try {
 		console.log(`ObjectID: ${id}`);
 		
 		const { state, saveState } = useSingleFileAuthState(`./sessions/session-${id}.json`)
 		sock[id] = makeWASocket({
-			// logger: P({ level: 'trace' }),
+			connectTimeoutMs: 10000,
+			defaultQueryTimeoutMs: 10000000,
+			keepAliveIntervalMs: 10000000,
 			printQRInTerminal: true,
 			auth: state
 		})
@@ -39,19 +71,27 @@ const startSock = async (id) => {
 					});
 				}
 				if(connection === 'close') {
-					console.log(`connection: ${connection}`);
+					console.log(`connection: close`);
 					if((lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut) {
 						console.log('run close not logout');
 						setTimeout(() => {
 							startSock(id)
-						}, 10000)
+						}, 15000)
 					} else {
-						unlink(`./sessions/session-${id}.json`, (err) => {
-							if (err) throw err;
-							console.log(`successfully deleted session ${id}`);
-							startSock(id)
-						});
+						if (existsSync(`./sessions/session-${id}.json`)) {
+							unlink(`./sessions/session-${id}.json`, (err) => {
+								if (err) throw err;
+								console.log(`successfully deleted session ${id}`);
+								const savedSessions = getSessionsFile();
+								const sessionIndex = savedSessions.findIndex(e => e.id == id);
+								savedSessions.splice(sessionIndex, 1);
+								setSessionsFile(savedSessions);
+							});
+						}
 					}
+				} else if(connection === 'open'){
+					console.log(`connection: open`);
+					io.emit('name', { id: id, name: state.creds.me.name, status: 'open' });
 				}
 			} catch (error) {
 					
@@ -59,7 +99,15 @@ const startSock = async (id) => {
 		})
 
 		sock[id].ev.on('creds.update', saveState)
-
+		const savedSessions = getSessionsFile();
+		const sessionIndex = savedSessions.findIndex(sess => sess.id == id);
+	
+		if (sessionIndex == -1) {
+			savedSessions.push({
+				id: id,
+			});
+			setSessionsFile(savedSessions);
+		}
 		return false;
 	} catch (error) {
 		console.log('error: startSock');
@@ -68,15 +116,23 @@ const startSock = async (id) => {
 }
 
 const init = async (socket?) => {
-	var idClient = ["wacs3"]
+	const savedSessions = getSessionsFile();
 	console.log('run init');
-	idClient.forEach(e => {
-		startSock(e)
+	savedSessions.forEach(e => {
+		console.log(`init :${e.id}`);
+		startSock(e.id)
 	});
 }
 init()
+
 io.on('connection', function (socket) {
   init(socket);
+	socket.on('create-session', function (data) {
+		if(data.id){
+			console.log('io connection: ' + data.id);
+			startSock(data.id);
+		}
+  });
 });
 
 app.get('/', (req, res) => {
