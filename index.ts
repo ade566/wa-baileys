@@ -4,6 +4,7 @@ import * as express from 'express';
 import * as http from 'http'
 import * as qrcode from 'qrcode'
 import {Server} from 'socket.io'
+import * as path from 'path'
 import makeWASocket, { DisconnectReason, useSingleFileAuthState } from '@adiwajshing/baileys'
 
 const port = 3000;
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({
   extended: true
 }));
+app.use('/assets', express.static(path.join(__dirname, '/assets/')))
 
 const sessions = [];
 const SESSIONS_FILE = './sessions/whatsapp-id.json';
@@ -145,20 +147,23 @@ app.post('/send-message', async (req, res) => {
 	const sender = req.body.sender;
   const number = `${req.body.number}@s.whatsapp.net`;
   const message = req.body.message;
+	var timeout = 5000;
 	setTimeout(async () => {
 		try {
 			const sendMessage = await sock[sender].sendMessage(number, { text: message })
+			timeout = 5000;
 			res.status(200).json({
 				status: true,
 				response: sendMessage
 			});
 		} catch (error) {
+			timeout = 10000;
 			res.status(500).json({
 				status: false,
 				response: error,
 			});
 		}
-	}, 5000)
+	}, timeout)
 });
 
 server.listen(port, function () {
