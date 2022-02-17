@@ -76,8 +76,10 @@ const startSock = async (id) => {
 					console.log(`connection: close`);
 					if((lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut) {
 						console.log('run close not logout');
-						setTimeout(() => {
-							startSock(id)
+						setTimeout( () => {
+							try {
+								startSock(id)
+							} catch (error) { }
 						}, 15000)
 					} else {
 						if (existsSync(`./sessions/session-${id}.json`)) {
@@ -95,9 +97,7 @@ const startSock = async (id) => {
 					console.log(`connection: open`);
 					io.emit('name', { id: id, name: state.creds.me.name, status: 'open' });
 				}
-			} catch (error) {
-					
-			}
+			} catch (error) { }
 		})
 
 		sock[id].ev.on('creds.update', saveState)
@@ -121,8 +121,10 @@ const init = async (socket?) => {
 	const savedSessions = getSessionsFile();
 	console.log('run init');
 	savedSessions.forEach(e => {
-		console.log(`init :${e.id}`);
-		startSock(e.id)
+		try {
+			console.log(`init :${e.id}`);
+			startSock(e.id)
+		} catch (error) { }
 	});
 }
 init()
@@ -131,8 +133,10 @@ io.on('connection', function (socket) {
   init(socket);
 	socket.on('create-session', function (data) {
 		if(data.id){
-			console.log('io connection: ' + data.id);
-			startSock(data.id);
+			try {
+				console.log('io connection: ' + data.id);
+				startSock(data.id);
+			} catch (error) { }
 		}
   });
 });
